@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/BurntSushi/toml"
 	"github.com/oncilla/confex/pkg/data"
@@ -39,6 +40,10 @@ var Root = &cobra.Command{
 	Use:   "confex [file]",
 	Short: "A terminal based configuration file explorer",
 	Args:  cobra.MaximumNArgs(1),
+	Example: `  confex config.json
+  cat config.yml | confex
+  echo $( curl http://headers.jsontest.com/ ) | confex
+	`,
 	// See https://github.com/spf13/cobra/issues/340#issuecomment-374617413.
 	Long: `A terminal based configuration file explorer
 
@@ -46,12 +51,28 @@ You can pass in any json, yaml or toml file and explore it interactively.
 `,
 	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// TODO(oncilla): support piped files.
-		cmd.SilenceUsage = true
+		var cfg *data.Config
 
-		cfg, err := fromFile(args[0])
-		if err != nil {
-			return err
+		if len(args) == 1 {
+			cmd.SilenceUsage = true
+			var err error
+			if cfg, err = fromFile(args[0]); err != nil {
+				return err
+			}
+		} else {
+			stat, _ := os.Stdin.Stat()
+			if (stat.Mode() & os.ModeCharDevice) != 0 {
+				return fmt.Errorf("no file or pipe provided")
+			}
+
+			cmd.SilenceUsage = true
+			bytes, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				return fmt.Errorf("reading from pipe: %w", err)
+			}
+			if cfg, err = tryAll(bytes); err != nil {
+				return err
+			}
 		}
 		return ui.ControlLoop(cfg)
 	},
