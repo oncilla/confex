@@ -34,9 +34,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var rootFlags struct {
-}
-
 // Root is the entry point for the confex application.
 var Root = &cobra.Command{
 	Use:   "confex [file]",

@@ -38,7 +38,7 @@ func ControlLoop(cfg *data.Config) error {
 	defer ui.Close()
 
 	cv := NewConfigView(cfg)
-	cv.render()
+	_ = cv.render()
 
 	previousKey := ""
 	uiEvents := ui.PollEvents()
