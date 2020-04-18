@@ -39,11 +39,11 @@ type ConfigView struct {
 	tree     *widgets.Tree
 	path     *widgets.Paragraph
 	contents *widgets.Paragraph
-	cfg      data.Config
+	cfg      *data.Config
 }
 
 // NewConfigView constructs a new configuration view
-func NewConfigView(cfg data.Config) *ConfigView {
+func NewConfigView(cfg *data.Config) *ConfigView {
 	tree := widgets.NewTree()
 	tree.Title = "tree"
 	tree.WrapText = false

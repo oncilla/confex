@@ -31,7 +31,7 @@ import (
 )
 
 // ControlLoop controls the terminal UI.
-func ControlLoop(cfg data.Config) error {
+func ControlLoop(cfg *data.Config) error {
 	if err := ui.Init(); err != nil {
 		return err
 	}
@@ -72,6 +72,8 @@ func ControlLoop(cfg data.Config) error {
 		case "E":
 			cv.tree.ExpandAll()
 		case "C":
+			// TODO(oncilla): Figure out why this is needed.
+			cv.tree.SelectedRow = 0
 			cv.tree.CollapseAll()
 		case "<Resize>":
 			payload := e.Payload.(ui.Resize)

@@ -29,6 +29,7 @@ import (
 
 func newTree(dnode *data.Node) []*widgets.TreeNode {
 	root := newNode(dnode)
+	root.Expanded = true
 	return []*widgets.TreeNode{root}
 }
 

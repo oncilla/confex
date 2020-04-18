@@ -28,7 +28,8 @@ import (
 
 // Supported language types
 const (
-	JSON Language = iota
+	Any Language = iota
+	JSON
 	YAML
 	TOML
 )
