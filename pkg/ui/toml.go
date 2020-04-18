@@ -36,7 +36,9 @@ func encodeToml(v interface{}) ([]byte, error) {
 	switch k {
 	case reflect.Map:
 		buf := &bytes.Buffer{}
-		err := toml.NewEncoder(buf).Encode(v)
+		enc := toml.NewEncoder(buf)
+		enc.Indent = "    "
+		err := enc.Encode(v)
 		return buf.Bytes(), err
 	case reflect.Slice:
 		buf := &bytes.Buffer{}

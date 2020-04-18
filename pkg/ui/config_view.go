@@ -45,16 +45,17 @@ type ConfigView struct {
 // NewConfigView constructs a new configuration view
 func NewConfigView(cfg *data.Config) *ConfigView {
 	tree := widgets.NewTree()
-	tree.Title = "tree"
+	tree.Title = " outline "
 	tree.WrapText = false
 	tree.SetNodes(newTree(cfg.Tree))
 	tree.SelectedRowStyle = ui.NewStyle(ui.ColorGreen, ui.ColorClear, ui.ModifierBold)
 
 	path := widgets.NewParagraph()
-	path.Title = "path"
+	path.Title = " path "
 
 	contents := widgets.NewParagraph()
-	contents.Title = "contents"
+	contents.PaddingTop = 1
+	contents.PaddingLeft = 1
 
 	grid := ui.NewGrid()
 	termWidth, termHeight := ui.TerminalDimensions()
@@ -95,6 +96,12 @@ func (cv *ConfigView) render() error {
 	}
 	cv.contents.Text = string(raw) + " "
 	cv.path.Text = path
+
+	if path != "" {
+		cv.contents.Title = " " + path + " "
+	} else {
+		cv.contents.Title = " contents "
+	}
 	ui.Render(cv)
 	return nil
 }
