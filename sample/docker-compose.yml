@@ -1,0 +1,67 @@
+source: https://github.com/big-data-europe/README/wiki/Construct-a-docker-compose.yml-file
+
+database:
+  image: tenforce/virtuoso:1.3.0-virtuoso7.2.2
+  environment:
+    SPARQL_UPDATE: "true"
+    DEFAULT_GRAPH: "http://mu.semte.ch/application"
+  volumes:
+    - ./data/db:/data
+    - ./config/toLoad:/data/toLoad
+
+# Logs CPU stats and docker container events.
+swarm-logger:
+  image: bde2020/mu-swarm-logger-service:latest
+  links:
+    - database:database
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+
+# All event-query, docker-watcher, har-transformation & elasticsearch
+# are necessary for HTTP logging.
+event-query:
+  image: bde2020/mu-event-query-service
+  links:
+    - database:database
+  volumes:
+    - ./containers:/usr/src/app/containers/
+
+docker-watcher:
+  image: bde2020/mu-docker-watcher-service
+  volumes:
+    - ./config/supervisord/supervisord.conf:/etc/supervisord.conf
+    - ./containers:/app/containers
+    - ./pcap:/app/pcap/
+  network_mode: host
+  environment:
+    PCAP_READ_DIR: '/pcap'
+
+har-transformation:
+  image: bde2020/mu-har-transformation-service
+  volumes:
+    - ./pcap:/app/pcap
+    - ./har:/app/har
+    - ./containers:/app/containers
+    - ./backups:/app/backups
+  links:
+    - elasticsearch:elasticsearch
+  environment:
+    BU_DIR: "/app/backups"
+
+elasticsearch:
+  image: elasticsearch:2.4.6
+  command: elasticsearch -D network.host=0.0.0.0
+
+spark-master:
+  image: bde2020/spark-master:2.2.0-hadoop2.7
+  container_name: spark-master
+  ports:
+    - "8080:8080"
+    - "7077:7077"
+  environment:
+    VIRTUAL_HOST: "spark-master.big-data-europe.aksw.org"
+    VIRTUAL_PORT: "8080"
+    INIT_DAEMON_STEP: "setup_spark"
+    constraint: "node==<yourmasternode>"
+    LOG: "true" # Log container's docker events into the database.
+    logging: "true" # Log container's HTTP traffic.
