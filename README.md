@@ -1,6 +1,9 @@
 # confex
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/oncilla/confex)](https://goreportcard.com/report/github.com/oncilla/confex)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/oncilla/confex)
+[![Release](https://img.shields.io/github/release-pre/oncilla/confex.svg)](https://github.com/oncilla/confex/releases)
+[![license](https://img.shields.io/github/license/oncilla/confex.svg?maxAge=2592000)](https://github.com/oncilla/confex/blob/master/LICENSE)
 
 confex helps you explore configuration files. It currently supports yaml, json,
 and toml configurations.
