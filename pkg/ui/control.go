@@ -23,73 +23,161 @@
 package ui
 
 import (
-	"fmt"
-	"os"
+	"time"
 
 	ui "github.com/gizak/termui/v3"
+	"github.com/gizak/termui/v3/widgets"
 	"github.com/oncilla/confex/pkg/data"
 )
 
-// ControlLoop controls the terminal UI.
-func ControlLoop(cfg *data.Config) error {
+const (
+	displayContents = iota
+	displayHelp
+)
+
+// Window is the main container for displaying.
+type Window struct {
+	help struct {
+		tabs *widgets.TabPane
+		text *widgets.Paragraph
+	}
+	explorer struct {
+		tabs     *widgets.TabPane
+		contents *ConfigView
+	}
+	displayMode int
+	exit        bool
+}
+
+// NewWindow constructs a new window.
+func NewWindow(cfg *data.Config) *Window {
+	helpTab := widgets.NewTabPane("<ANY> Press to return")
+	helpTab.ActiveTabStyle = ui.StyleClear
+	helpTab.Border = false
+
+	helpText := widgets.NewParagraph()
+	helpText.Text = helpMsg
+	helpText.PaddingLeft = 1
+
+	explorerTab := widgets.NewTabPane("<ENTER>,e: Toggle expand", "E: Expand all", "C: Collapse all", "h: Help", "q: quit")
+	explorerTab.ActiveTabStyle = ui.StyleClear
+	explorerTab.Border = false
+
+	w := &Window{}
+	w.help.tabs = helpTab
+	w.help.text = helpText
+	w.explorer.tabs = explorerTab
+	w.explorer.contents = NewConfigView(cfg)
+	return w
+}
+
+// Run starts the process.
+func (w *Window) Run() error {
 	if err := ui.Init(); err != nil {
 		return err
 	}
 	defer ui.Close()
 
-	cv := NewConfigView(cfg)
-	_ = cv.render()
+	termWidth, termHeight := ui.TerminalDimensions()
+	w.SetRect(0, 0, termWidth, termHeight)
+	w.Render()
 
 	previousKey := ""
 	uiEvents := ui.PollEvents()
-	for {
-		e := <-uiEvents
-		switch e.ID {
-		case "q", "<C-c>":
-			return nil
-		case "j", "<Down>":
-			cv.tree.ScrollDown()
-		case "k", "<Up>":
-			cv.tree.ScrollUp()
-		case "<C-d>":
-			cv.tree.ScrollHalfPageDown()
-		case "<C-u>":
-			cv.tree.ScrollHalfPageUp()
-		case "<C-f>":
-			cv.tree.ScrollPageDown()
-		case "<C-b>":
-			cv.tree.ScrollPageUp()
-		case "g":
-			if previousKey == "g" {
-				cv.tree.ScrollTop()
+	ticker := time.NewTicker(500 * time.Millisecond)
+
+	for !w.exit {
+		select {
+		case e := <-uiEvents:
+
+			switch e.ID {
+			case "g":
+				if previousKey == "g" {
+					e.ID = "gg"
+					w.handleEvent(e)
+				} else {
+					w.handleEvent(e)
+				}
+			case "<Resize>":
+				width, height := ui.TerminalDimensions()
+				w.SetRect(0, 0, width, height)
+				ui.Clear()
+			default:
+				w.handleEvent(e)
 			}
-		case "<Home>":
-			cv.tree.ScrollTop()
-		case "<Enter>":
-			cv.tree.ToggleExpand()
-		case "G", "<End>":
-			cv.tree.ScrollBottom()
-		case "E":
-			cv.tree.ExpandAll()
-		case "C":
-			// TODO(oncilla): Figure out why this is needed.
-			cv.tree.SelectedRow = 0
-			cv.tree.CollapseAll()
-		case "<Resize>":
-			payload := e.Payload.(ui.Resize)
-			cv.SetRect(0, 0, payload.Width, payload.Height)
-			ui.Clear()
+
+			// Clear key state.
+			if previousKey == "g" {
+				previousKey = ""
+			} else {
+				previousKey = e.ID
+			}
+		case <-ticker.C:
 		}
 
-		if previousKey == "g" {
-			previousKey = ""
-		} else {
-			previousKey = e.ID
-		}
+		w.Render()
+	}
+	return nil
+}
 
-		// FIXME(oncilla): This should write to an error box instead.
-		if err := cv.render(); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-		}
+func (w *Window) handleEvent(e ui.Event) {
+	switch w.displayMode {
+	case displayHelp:
+		w.displayMode = displayContents
+	default:
+		w.handleEventExplorer(e)
+	}
+}
+
+func (w *Window) handleEventExplorer(e ui.Event) {
+	switch e.ID {
+	case "q", "<C-c>", "Q":
+		w.exit = true
+	case "j", "<Down>":
+		w.explorer.contents.tree.ScrollDown()
+	case "k", "<Up>":
+		w.explorer.contents.tree.ScrollUp()
+	case "<C-d>":
+		w.explorer.contents.tree.ScrollHalfPageDown()
+	case "<C-u>":
+		w.explorer.contents.tree.ScrollHalfPageUp()
+	case "<C-f>":
+		w.explorer.contents.tree.ScrollPageDown()
+	case "<C-b>":
+		w.explorer.contents.tree.ScrollPageUp()
+	case "gg":
+		w.explorer.contents.tree.ScrollTop()
+	case "<Home>":
+		w.explorer.contents.tree.ScrollTop()
+	case "e", "<Enter>":
+		w.explorer.contents.tree.ToggleExpand()
+	case "G", "<End>":
+		w.explorer.contents.tree.ScrollBottom()
+	case "E":
+		w.explorer.contents.tree.ExpandAll()
+	case "c", "C":
+		// TODO(oncilla): Figure out why this is needed.
+		w.explorer.contents.tree.SelectedRow = 0
+		w.explorer.contents.tree.CollapseAll()
+	case "h", "H":
+		w.displayMode = displayHelp
+	}
+}
+
+// SetRect rearranges the window.
+func (w *Window) SetRect(x1, y1, x2, y2 int) {
+	w.help.text.SetRect(x1, y1, x2, y2-1)
+	w.help.tabs.SetRect(0, y2-1, x2, y2)
+	w.explorer.contents.SetRect(x1, y1, x2, y2-1)
+	w.explorer.tabs.SetRect(0, y2-1, x2, y2)
+}
+
+// Render renders the window.
+func (w *Window) Render() {
+	switch w.displayMode {
+	case displayContents:
+		ui.Render(w.explorer.tabs, w.explorer.contents)
+	case displayHelp:
+		ui.Render(w.help.tabs, w.help.text)
 	}
 }

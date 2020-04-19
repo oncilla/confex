@@ -66,7 +66,7 @@ func NewTree(y interface{}) (*Node, error) {
 			if err != nil {
 				return nil, fmt.Errorf("at %d: %w", i, err)
 			}
-			cnode.Name = fmt.Sprintf("[%d] ", i) //strconv.Itoa(i)
+			cnode.Name = fmt.Sprintf("[%d]", i)
 			cnode.Parent = node
 			node.Nodes = append(node.Nodes, cnode)
 		}
@@ -87,5 +87,5 @@ func (n *Node) Path() string {
 }
 
 func (n *Node) String() string {
-	return n.Name
+	return n.Name + " "
 }

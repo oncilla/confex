@@ -74,7 +74,8 @@ You can pass in any json, yaml or toml file and explore it interactively.
 				return err
 			}
 		}
-		return ui.ControlLoop(cfg)
+		w := ui.NewWindow(cfg)
+		return w.Run()
 	},
 }
 

@@ -56,20 +56,8 @@ func NewConfigView(cfg *data.Config) *ConfigView {
 	contents := widgets.NewParagraph()
 	contents.PaddingTop = 1
 	contents.PaddingLeft = 1
-
 	grid := ui.NewGrid()
-	termWidth, termHeight := ui.TerminalDimensions()
-	grid.SetRect(0, 0, termWidth, termHeight)
 
-	grid.Set(
-		ui.NewRow(0.87,
-			ui.NewCol(0.25, tree),
-			ui.NewCol(0.75, contents),
-		),
-		ui.NewRow(0.13,
-			ui.NewCol(1, path),
-		),
-	)
 	return &ConfigView{
 		Grid:     grid,
 		contents: contents,
@@ -79,7 +67,25 @@ func NewConfigView(cfg *data.Config) *ConfigView {
 	}
 }
 
-func (cv *ConfigView) render() error {
+func (cv *ConfigView) SetRect(x1, y1, x2, y2 int) {
+	ratio := 3.0 / float64(y2-y1)
+	cv.Grid = ui.NewGrid()
+
+	cv.Grid.Set(
+		ui.NewRow(1-ratio,
+			ui.NewCol(0.25, cv.tree),
+			ui.NewCol(0.75, cv.contents),
+		),
+		ui.NewRow(ratio,
+			ui.NewCol(1, cv.path),
+		),
+	)
+
+	cv.Grid.SetRect(x1, y1, x2, y2)
+
+}
+
+func (cv *ConfigView) Draw(b *ui.Buffer) {
 	var contents interface{}
 	var path string
 
@@ -92,24 +98,25 @@ func (cv *ConfigView) render() error {
 	}
 	raw, err := marshal(contents, cv.cfg.Language)
 	if err != nil {
-		return err
+		// TODO(oncilla): add way to display error
+		return
 	}
 	cv.contents.Text = string(raw) + " "
-	cv.path.Text = path
+	cv.path.Text = path + " "
 
 	if path != "" {
 		cv.contents.Title = " " + path + " "
 	} else {
 		cv.contents.Title = " contents "
 	}
-	ui.Render(cv)
-	return nil
+	cv.Grid.Draw(b)
+
 }
 
 func marshal(contents interface{}, lang data.Language) ([]byte, error) {
 	switch lang {
 	case data.JSON:
-		return json.MarshalIndent(contents, "", "    ")
+		return json.MarshalIndent(contents, "", "  ")
 	case data.YAML:
 		return yml.Marshal(contents)
 	case data.TOML:
