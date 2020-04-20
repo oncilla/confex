@@ -57,3 +57,7 @@ confex also supports piped input.
 
 
 ![](sample/sample.gif)
+
+## Related Work
+
+This project is inspired by https://github.com/gulyasm/jsonui
